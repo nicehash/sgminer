@@ -159,7 +159,7 @@ uint8_t * buf, size_t buflen)
 	dummy.mask1 = 1;
 	if (yescrypt_kdf(&dummy, shared1,
 		param, paramlen, NULL, 0, N, r, p, 0,
-		YESCRYPT_RW | YESCRYPT_PARALLEL_SMIX | __YESCRYPT_INIT_SHARED_1,
+		(yescrypt_flags_t)(YESCRYPT_RW | YESCRYPT_PARALLEL_SMIX | __YESCRYPT_INIT_SHARED_1),
 		salt, sizeof(salt)))
 		goto out;
 
@@ -172,19 +172,19 @@ uint8_t * buf, size_t buflen)
 
 	if (p > 1 && yescrypt_kdf(&half1, &half2.shared1,
 		param, paramlen, salt, sizeof(salt), N, r, p, 0,
-		YESCRYPT_RW | YESCRYPT_PARALLEL_SMIX | __YESCRYPT_INIT_SHARED_2,
+		(yescrypt_flags_t)(YESCRYPT_RW | YESCRYPT_PARALLEL_SMIX | __YESCRYPT_INIT_SHARED_2),
 		salt, sizeof(salt)))
 		goto out;
 
 	if (yescrypt_kdf(&half2, &half1.shared1,
 		param, paramlen, salt, sizeof(salt), N, r, p, 0,
-		YESCRYPT_RW | YESCRYPT_PARALLEL_SMIX | __YESCRYPT_INIT_SHARED_1,
+		(yescrypt_flags_t)(YESCRYPT_RW | YESCRYPT_PARALLEL_SMIX | __YESCRYPT_INIT_SHARED_1),
 		salt, sizeof(salt)))
 		goto out;
 
 	if (yescrypt_kdf(&half1, &half2.shared1,
 		param, paramlen, salt, sizeof(salt), N, r, p, 0,
-		YESCRYPT_RW | YESCRYPT_PARALLEL_SMIX | __YESCRYPT_INIT_SHARED_1,
+		(yescrypt_flags_t)(YESCRYPT_RW | YESCRYPT_PARALLEL_SMIX | __YESCRYPT_INIT_SHARED_1),
 		buf, buflen))
 		goto out;
 
@@ -600,7 +600,7 @@ smix1(uint64_t * B, size_t r, uint64_t N, yescrypt_flags_t flags,
 			blockmix(Y, X, Z, r);
 		}
 	} else {
-		yescrypt_flags_t rw = flags & YESCRYPT_RW;
+		yescrypt_flags_t rw = (yescrypt_flags_t)(flags & YESCRYPT_RW);
 		/* 4: X <-- H(X) */
 		blockmix(Y, X, Z, r);
 
@@ -674,7 +674,7 @@ smix2(uint64_t * B, size_t r, uint64_t N, uint64_t Nloop,
 	const uint64_t * VROM = (uint64_t *)shared->shared1.aligned;
 	uint32_t VROM_mask = shared->mask1 | 1;
 	size_t s = 16 * r;
-	yescrypt_flags_t rw = flags & YESCRYPT_RW;
+	yescrypt_flags_t rw = (yescrypt_flags_t)(flags & YESCRYPT_RW);
 	uint64_t * X = XY;
 	uint64_t * Y = &XY[s];
 	uint64_t * Z = S ? S : &XY[2 * s];
@@ -835,7 +835,7 @@ smix(uint64_t * B, size_t r, uint64_t N, uint32_t p, uint32_t t,
 		uint64_t * Sp = S ? &S[i * S_SIZE_ALL] : S;
 
 		if (Sp) 
-			smix1(Bp, 1, S_SIZE_ALL / 16, (yescrypt_flags_t)flags & ~YESCRYPT_PWXFORM,Sp, NROM, shared, XYp, NULL);
+			smix1(Bp, 1, S_SIZE_ALL / 16, (yescrypt_flags_t)(flags & ~YESCRYPT_PWXFORM),Sp, NROM, shared, XYp, NULL);
 
 	
 
@@ -856,7 +856,7 @@ smix(uint64_t * B, size_t r, uint64_t N, uint32_t p, uint32_t t,
 			uint64_t * XYp = XY;
 
 			uint64_t * Sp = S ? &S[i * S_SIZE_ALL] : S;
-			smix2(Bp, r, N, Nloop_all - Nloop_rw,flags & ~YESCRYPT_RW, V, NROM, shared, XYp, Sp);
+			smix2(Bp, r, N, Nloop_all - Nloop_rw,(yescrypt_flags_t)(flags & ~YESCRYPT_RW), V, NROM, shared, XYp, Sp);
 
 		}
 	}
@@ -914,7 +914,7 @@ uint64_t * XY, uint64_t * S)
 		uint64_t * Sp = S ? &S[i * S_SIZE_ALL] : S;
 
 		if (Sp) {
-			smix1(Bp, 1, S_SIZE_ALL / 16, flags & ~YESCRYPT_PWXFORM, Sp, NROM, shared, XYp, NULL);
+			smix1(Bp, 1, S_SIZE_ALL / 16, (yescrypt_flags_t)(flags & ~YESCRYPT_PWXFORM), Sp, NROM, shared, XYp, NULL);
 
 
 		}
@@ -934,7 +934,7 @@ uint64_t * XY, uint64_t * S)
 			uint64_t * XYp = XY;
 
 			uint64_t * Sp = S ? &S[i * S_SIZE_ALL] : S;
-			smix2(Bp, r, N, Nloop_all - Nloop_rw, flags & ~YESCRYPT_RW, V, NROM, shared, XYp, Sp);
+			smix2(Bp, r, N, Nloop_all - Nloop_rw, (yescrypt_flags_t)(flags & ~YESCRYPT_RW), V, NROM, shared, XYp, Sp);
 		}
 	}
 }
@@ -975,7 +975,7 @@ yescrypt_kdf(const yescrypt_shared_t * shared, yescrypt_local_t * local,
 	 * because any deviation from classic scrypt implies those.
 	 */
 	if (p == 1)
-		flags &= ~YESCRYPT_PARALLEL_SMIX;
+		flags = (yescrypt_flags_t)(flags & ~YESCRYPT_PARALLEL_SMIX);
 
 	/* Sanity-check parameters */
 	if (flags & ~YESCRYPT_KNOWN_FLAGS) {
@@ -1181,7 +1181,7 @@ uint8_t * buf, size_t buflen)
 	* because any deviation from classic scrypt implies those.
 	*/
 	if (p == 1)
-		flags &= ~YESCRYPT_PARALLEL_SMIX;
+		flags = (yescrypt_flags_t)(flags & ~YESCRYPT_PARALLEL_SMIX);
 
 	/* Sanity-check parameters */
 	if (flags & ~YESCRYPT_KNOWN_FLAGS) {

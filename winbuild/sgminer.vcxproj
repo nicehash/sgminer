@@ -285,7 +285,9 @@
     <ClCompile Include="..\algorithm\x14.c" />
     <ClCompile Include="..\algorithm\fresh.c" />
     <ClCompile Include="..\algorithm\whirlcoin.c" />
+    <ClCompile Include="..\algorithm\yescrypt-opt.c" />
     <ClCompile Include="..\algorithm\yescrypt.c" />
+    <ClCompile Include="..\algorithm\yescryptcommon.c" />
     <ClCompile Include="..\api.c" />
     <ClCompile Include="..\ccan\opt\helpers.c" />
     <ClCompile Include="..\ccan\opt\opt.c" />
@@ -362,6 +364,7 @@
     <ClInclude Include="..\algorithm\fresh.h" />
     <ClInclude Include="..\algorithm\whirlcoin.h" />
     <ClInclude Include="..\algorithm\yescrypt.h" />
+    <ClInclude Include="..\algorithm\yescrypt_core.h" />
     <ClInclude Include="..\api.h" />
     <ClInclude Include="..\arg-nonnull.h" />
     <ClInclude Include="..\bench_block.h" />

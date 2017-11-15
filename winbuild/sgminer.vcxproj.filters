@@ -248,6 +248,12 @@
     <ClCompile Include="..\algorithm\yescrypt.c">
       <Filter>Source Files\algorithm</Filter>
     </ClCompile>
+    <ClCompile Include="..\algorithm\yescryptcommon.c">
+      <Filter>Source Files\algorithm</Filter>
+    </ClCompile>
+    <ClCompile Include="..\algorithm\yescrypt-opt.c">
+      <Filter>Source Files\algorithm</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\adl.h">
@@ -480,6 +486,9 @@
     </ClInclude>
     <ClInclude Include="..\algorithm\yescrypt.h">
       <Filter>Header Files\algorithm</Filter>
+    </ClInclude>
+    <ClInclude Include="..\algorithm\yescrypt_core.h">
+      <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
