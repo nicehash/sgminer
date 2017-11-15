@@ -8,6 +8,8 @@
  * any later version.  See COPYING for more details.
  */
 
+#include "config.h" // you always need this before pthread.h or it'll try to re-define struct timespec
+
 #include <stdio.h>
 #include <pthread.h>
 #include <string.h>
