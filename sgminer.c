@@ -2063,6 +2063,7 @@ static void update_gbt(struct pool *pool)
   }
   curl_easy_cleanup(curl);
 }
+#endif
 
 /* Return the work coin/network difficulty */
 static double get_work_blockdiff(const struct work *work)
@@ -2103,6 +2104,7 @@ static double get_work_blockdiff(const struct work *work)
   return numerator / (double)diff64;
 }
 
+#ifdef HAVE_LIBCURL
 static void gen_gbt_work(struct pool *pool, struct work *work)
 {
   unsigned char *merkleroot;
@@ -3700,6 +3702,7 @@ static inline bool can_roll(struct work *work)
   return (!work->stratum && work->pool && work->rolltime && !work->clone &&
     work->rolls < 7000 && !stale_work(work, false));
 }
+#endif
 
 static uint32_t _get_work_time(struct work *work)
 {
@@ -3721,6 +3724,7 @@ static void _set_work_time(struct work *work, uint32_t ntime)
   (*work_ntime) = ntime;
 }
 
+#ifdef HAVE_LIBCURL
 static void roll_work(struct work *work)
 {
   uint32_t work_ntime;
@@ -7735,6 +7739,7 @@ static struct timeval rotate_tv;
 /* We reap curls if they are unused for over a minute */
 static void reap_curl(struct pool *pool)
 {
+#ifdef HAVE_LIBCURL
   struct curl_ent *ent, *iter;
   struct timeval now;
   int reaped = 0;
@@ -7757,6 +7762,7 @@ static void reap_curl(struct pool *pool)
 
   if (reaped)
     applog(LOG_DEBUG, "Reaped %d curl%s from %s", reaped, reaped > 1 ? "s" : "", get_pool_name(pool));
+#endif
 }
 
 static void *watchpool_thread(void __maybe_unused *userdata)

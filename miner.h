@@ -19,6 +19,7 @@ extern char *curly;
 #define curl_global_cleanup() {}
 #define CURL_GLOBAL_ALL 0
 #define curl_global_init(X) (0)
+#define CURL_ERROR_SIZE 1
 #endif
 #include <sched.h>
 
@@ -1301,12 +1302,14 @@ typedef struct _dev_blk_ctx {
   struct work *work;
 } dev_blk_ctx;
 
+#ifdef HAVE_LIBCURL
 struct curl_ent {
   CURL *curl;
   char curl_err_str[CURL_ERROR_SIZE];
   struct list_head node;
   struct timeval tv;
 };
+#endif
 
 /* The lowest enum of a freshly calloced value is the default */
 enum pool_state {
