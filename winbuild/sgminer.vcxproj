@@ -402,6 +402,11 @@
   <ItemGroup>
     <None Include="README.txt" />
   </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="jansson\jansson.vcxproj">
+      <Project>{afe7d2aa-025c-4837-b4b2-81117e010b3b}</Project>
+    </ProjectReference>
+  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>
