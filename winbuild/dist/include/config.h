@@ -13,6 +13,10 @@
 #define STDC_HEADERS 1
 #define EXECV_2ND_ARG_TYPE char* const*
 
+#if defined(_MSC_VER) && _MSC_VER > 1500 // visual studio 2015 and later has timespec in time.h
+#define HAVE_STRUCT_TIMESPEC 1
+#endif
+
 #define HAVE_ALLOCA 1
 #define HAVE_ATTRIBUTE_COLD 1
 #define HAVE_ATTRIBUTE_CONST 1
