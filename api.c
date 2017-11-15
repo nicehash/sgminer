@@ -766,13 +766,13 @@ struct api_data *print_data(struct api_data *root, char *buf, bool isjson, bool 
         sprintf(buf, "%u", *((unsigned int *)(root->data)));
         break;
       case API_UINT32:
-        sprintf(buf, "%"PRIu32, *((uint32_t *)(root->data)));
+        sprintf(buf, "%" PRIu32, *((uint32_t *)(root->data)));
         break;
       case API_HEX32:
         snprintf(buf, sizeof(buf), "0x%08x", *((uint32_t *)(root->data)));
         break;
       case API_UINT64:
-        sprintf(buf, "%"PRIu64, *((uint64_t *)(root->data)));
+        sprintf(buf, "%" PRIu64, *((uint64_t *)(root->data)));
         break;
       case API_TIME:
         sprintf(buf, "%lu", *((unsigned long *)(root->data)));
@@ -808,7 +808,7 @@ struct api_data *print_data(struct api_data *root, char *buf, bool isjson, bool 
         sprintf(buf, "%s", *((bool *)(root->data)) ? TRUESTR : FALSESTR);
         break;
       case API_TIMEVAL:
-        sprintf(buf, "%"PRIu64".%06lu",
+        sprintf(buf, "%" PRIu64 ".%06lu",
           (uint64_t)((struct timeval *)(root->data))->tv_sec,
           (unsigned long)((struct timeval *)(root->data))->tv_usec);
         break;
