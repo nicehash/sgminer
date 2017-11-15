@@ -667,8 +667,8 @@ const unsigned char C[12][64] = {
 
 void AddModulo512(const void *a,const void *b,void *c)
 {
-	const unsigned char *A=a, *B=b;
-	unsigned char *C=c;
+	const unsigned char *A=(const unsigned char*)a, *B=(const unsigned char*)b;
+	unsigned char *C=(unsigned char*)c;
 	int t = 0;
 #ifdef FULL_UNROLL
 #define ADDBYTE_8(i) t = A[i] + B[i] + (t >> 8); C[i] = t & 0xFF;
@@ -751,8 +751,8 @@ void AddModulo512(const void *a,const void *b,void *c)
 
 void AddXor512(const void *a,const void *b,void *c)
 {
-	const unsigned long long *A=a, *B=b;
-	unsigned long long *C=c;
+	const unsigned long long *A=(const unsigned long long*)a, *B=(const unsigned long long*)b;
+	unsigned long long *C=(unsigned long long*)c;
 #ifdef FULL_UNROLL
 	C[0] = A[0] ^ B[0];
 	C[1] = A[1] ^ B[1];
@@ -1051,7 +1051,7 @@ sph_gost256_init(void *cc)
 void
 sph_gost256(void *cc, const void *data, size_t len)
 {
-	hash_256(data, 8*len, cc);
+	hash_256((const unsigned char*)data, 8*len, (unsigned char*)cc);
 }
 
 /* see sph_gost.h */
@@ -1080,7 +1080,7 @@ sph_gost512_init(void *cc)
 void
 sph_gost512(void *cc, const void *data, size_t len)
 {
-	hash_512(data, 8*len, cc);
+	hash_512((const unsigned char*)data, 8*len, (unsigned char*)cc);
 }
 
 /* see sph_gost.h */

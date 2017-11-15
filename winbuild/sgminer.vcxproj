@@ -321,6 +321,7 @@
     <ClCompile Include="..\sph\cubehash.c" />
     <ClCompile Include="..\sph\echo.c" />
     <ClCompile Include="..\sph\fugue.c" />
+    <ClCompile Include="..\sph\gost.c" />
     <ClCompile Include="..\sph\groestl.c" />
     <ClCompile Include="..\sph\hamsi.c" />
     <ClCompile Include="..\sph\hamsi_helper.c" />
@@ -328,7 +329,9 @@
     <ClCompile Include="..\sph\keccak.c" />
     <ClCompile Include="..\sph\luffa.c" />
     <ClCompile Include="..\sph\panama.c" />
+    <ClCompile Include="..\sph\ripemd.c" />
     <ClCompile Include="..\sph\sha2.c" />
+    <ClCompile Include="..\sph\sha256_Y.c" />
     <ClCompile Include="..\sph\sha2big.c" />
     <ClCompile Include="..\sph\shabal.c" />
     <ClCompile Include="..\sph\shavite.c" />

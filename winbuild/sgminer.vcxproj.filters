@@ -254,6 +254,15 @@
     <ClCompile Include="..\algorithm\yescrypt-opt.c">
       <Filter>Source Files\algorithm</Filter>
     </ClCompile>
+    <ClCompile Include="..\sph\sha256_Y.c">
+      <Filter>Source Files\sph</Filter>
+    </ClCompile>
+    <ClCompile Include="..\sph\gost.c">
+      <Filter>Source Files\sph</Filter>
+    </ClCompile>
+    <ClCompile Include="..\sph\ripemd.c">
+      <Filter>Source Files\sph</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\adl.h">
