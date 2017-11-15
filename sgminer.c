@@ -8167,6 +8167,12 @@ void _quit(int status)
   }
 #endif
 
+#ifdef _WIN32
+  // Calling startup means we somewhere must call this. It would be ideal to have it in main but the exit never gets reached.
+  // Or, since WIN32 builds under MSVC compile as C++ we could RAII-n-scope it but anyway.
+  WSACleanup();
+#endif // _WIN32
+
   exit(status);
 }
 
@@ -8768,6 +8774,17 @@ int main(int argc, char *argv[])
   int i;
   char *s;
 
+#ifdef _WIN32
+  {
+	  WSADATA wsaData;
+	  int err = WSAStartup(MAKEWORD(2, 2), &wsaData);
+	  if (err) {
+		  quit(1, "Winsock startup failed with error %d\n", err);
+		  return err;
+	  }
+  }
+#endif // _WIN32
+
   /* This dangerous function tramples random dynamically allocated
    * variables so do it before anything at all */
   if (unlikely(curl_global_init(CURL_GLOBAL_ALL)))
@@ -8778,6 +8795,7 @@ int main(int argc, char *argv[])
   if (unlikely(pthread_mutex_init(&lockstat_lock, NULL)))
     quithere(1, "Failed to pthread_mutex_init lockstat_lock errno=%d", errno);
 #endif
+
 
   // initialize default profile (globals) before reading config options
   init_default_profile();
@@ -9300,6 +9318,5 @@ retry:
     push_curl_entry(ce, pool);
 #endif /* HAVE_LIBCURL */
   }
-
   return 0;
 }
