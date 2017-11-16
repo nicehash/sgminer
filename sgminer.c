@@ -2063,6 +2063,7 @@ static void update_gbt(struct pool *pool)
   }
   curl_easy_cleanup(curl);
 }
+#endif
 
 /* Return the work coin/network difficulty */
 static double get_work_blockdiff(const struct work *work)
@@ -2103,6 +2104,7 @@ static double get_work_blockdiff(const struct work *work)
   return numerator / (double)diff64;
 }
 
+#ifdef HAVE_LIBCURL
 static void gen_gbt_work(struct pool *pool, struct work *work)
 {
   unsigned char *merkleroot;
@@ -3700,6 +3702,7 @@ static inline bool can_roll(struct work *work)
   return (!work->stratum && work->pool && work->rolltime && !work->clone &&
     work->rolls < 7000 && !stale_work(work, false));
 }
+#endif
 
 static uint32_t _get_work_time(struct work *work)
 {
@@ -3721,6 +3724,7 @@ static void _set_work_time(struct work *work, uint32_t ntime)
   (*work_ntime) = ntime;
 }
 
+#ifdef HAVE_LIBCURL
 static void roll_work(struct work *work)
 {
   uint32_t work_ntime;
@@ -5141,7 +5145,7 @@ static void hashmeter(int thr_id, struct timeval *diff,
     double thread_rolling = 0.0;
     int i;
 
-    applog(LOG_DEBUG, "[thread %d: %"PRIu64" hashes, %.1f khash/sec]",
+    applog(LOG_DEBUG, "[thread %d: %" PRIu64 " hashes, %.1f khash/sec]",
       thr_id, hashes_done, hashes_done / 1000 / secs);
 
     /* Rolling average for each thread and each device */
@@ -6247,7 +6251,7 @@ static void gen_stratum_work(struct pool *pool, struct work *work)
         free(merkle_hash);
     }
     applog(LOG_DEBUG, "[THR%d] Generated stratum header %s", work->thr_id, header);
-    applog(LOG_DEBUG, "[THR%d] Work job_id %s nonce2 %"PRIu64" ntime %s", work->thr_id, work->job_id,
+    applog(LOG_DEBUG, "[THR%d] Work job_id %s nonce2 %" PRIu64 " ntime %s", work->thr_id, work->job_id,
            work->nonce2, work->ntime);
     free(header);
   }
@@ -7735,6 +7739,7 @@ static struct timeval rotate_tv;
 /* We reap curls if they are unused for over a minute */
 static void reap_curl(struct pool *pool)
 {
+#ifdef HAVE_LIBCURL
   struct curl_ent *ent, *iter;
   struct timeval now;
   int reaped = 0;
@@ -7757,6 +7762,7 @@ static void reap_curl(struct pool *pool)
 
   if (reaped)
     applog(LOG_DEBUG, "Reaped %d curl%s from %s", reaped, reaped > 1 ? "s" : "", get_pool_name(pool));
+#endif
 }
 
 static void *watchpool_thread(void __maybe_unused *userdata)
@@ -8160,6 +8166,12 @@ void _quit(int status)
     forkpid = 0;
   }
 #endif
+
+#ifdef _WIN32
+  // Calling startup means we somewhere must call this. It would be ideal to have it in main but the exit never gets reached.
+  // Or, since WIN32 builds under MSVC compile as C++ we could RAII-n-scope it but anyway.
+  WSACleanup();
+#endif // _WIN32
 
   exit(status);
 }
@@ -8762,6 +8774,17 @@ int main(int argc, char *argv[])
   int i;
   char *s;
 
+#ifdef _WIN32
+  {
+	  WSADATA wsaData;
+	  int err = WSAStartup(MAKEWORD(2, 2), &wsaData);
+	  if (err) {
+		  quit(1, "Winsock startup failed with error %d\n", err);
+		  return err;
+	  }
+  }
+#endif // _WIN32
+
   /* This dangerous function tramples random dynamically allocated
    * variables so do it before anything at all */
   if (unlikely(curl_global_init(CURL_GLOBAL_ALL)))
@@ -8772,6 +8795,7 @@ int main(int argc, char *argv[])
   if (unlikely(pthread_mutex_init(&lockstat_lock, NULL)))
     quithere(1, "Failed to pthread_mutex_init lockstat_lock errno=%d", errno);
 #endif
+
 
   // initialize default profile (globals) before reading config options
   init_default_profile();
@@ -9294,6 +9318,5 @@ retry:
     push_curl_entry(ce, pool);
 #endif /* HAVE_LIBCURL */
   }
-
   return 0;
 }

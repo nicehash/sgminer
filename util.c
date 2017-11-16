@@ -1795,7 +1795,7 @@ static bool send_version(struct pool *pool, json_t *val)
   if (!id)
     return false;
 
-  sprintf(s, "{\"id\": %d, \"result\": \""PACKAGE"/"CGMINER_VERSION"\", \"error\": null}", id);
+  sprintf(s, "{\"id\": %d, \"result\": \"" PACKAGE "/" CGMINER_VERSION "\", \"error\": null}", id);
   if (!stratum_send(pool, s, strlen(s)))
     return false;
 
@@ -2484,9 +2484,9 @@ resend:
     sprintf(s, "{\"id\": %d, \"method\": \"mining.subscribe\", \"params\": []}", swork_id++);
   } else {
     if (pool->sessionid)
-      sprintf(s, "{\"id\": %d, \"method\": \"mining.subscribe\", \"params\": [\""PACKAGE"/"CGMINER_VERSION"\", \"%s\"]}", swork_id++, pool->sessionid);
+      sprintf(s, "{\"id\": %d, \"method\": \"mining.subscribe\", \"params\": [\"" PACKAGE "/" CGMINER_VERSION "\", \"%s\"]}", swork_id++, pool->sessionid);
     else
-      sprintf(s, "{\"id\": %d, \"method\": \"mining.subscribe\", \"params\": [\""PACKAGE"/"CGMINER_VERSION"\"]}", swork_id++);
+      sprintf(s, "{\"id\": %d, \"method\": \"mining.subscribe\", \"params\": [\"" PACKAGE "/" CGMINER_VERSION "\"]}", swork_id++);
   }
 
   if (__stratum_send(pool, s, strlen(s)) != SEND_OK) {
