@@ -50,6 +50,7 @@ sgminer_SOURCES += config_parser.c config_parser.h
 sgminer_SOURCES += events.c events.h
 sgminer_SOURCES += ocl/build_kernel.c ocl/build_kernel.h
 sgminer_SOURCES += ocl/binary_kernel.c ocl/binary_kernel.h
+sgminer_SOURCES += ocl/patch_kernel.c ocl/patch_kernel.h
 
 sgminer_SOURCES += kernel/*.cl
 sgminer_SOURCES += algorithm/scrypt.c algorithm/scrypt.h
@@ -83,6 +84,7 @@ sgminer_SOURCES += algorithm/blake256.c algorithm/blake256.h
 sgminer_SOURCES += algorithm/blakecoin.c algorithm/blakecoin.h
 sgminer_SOURCES += algorithm/decred.c algorithm/decred.h
 sgminer_SOURCES += algorithm/pascal.c algorithm/pascal.h
+sgminer_SOURCES += algorithm/evocoin.c algorithm/evocoin.h
 sgminer_SOURCES += algorithm/lbry.c algorithm/lbry.h
 
 bin_SCRIPTS	= $(top_srcdir)/kernel/*.cl

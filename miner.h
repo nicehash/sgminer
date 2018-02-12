@@ -634,6 +634,8 @@ struct thr_info {
   int pool_no;
   struct timeval last;
   struct timeval sick;
+  uint8_t curSequence[12];
+  struct work *work;
 
   bool  pause;
   bool  paused;

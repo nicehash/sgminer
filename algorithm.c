@@ -44,6 +44,7 @@
 #include "algorithm/pascal.h"
 #include "algorithm/lbry.h"
 #include "algorithm/sibcoin.h"
+#include "algorithm/evocoin.h"
 
 #include "compat.h"
 
@@ -1229,6 +1230,8 @@ static algorithm_settings_t algos[] = {
   { "lbry", ALGO_LBRY, "", 1, 256, 256, 0, 0, 0xFF, 0xFFFFULL, 0x0000ffffUL, 2, 4 * 8 * 4194304, 0, lbry_regenhash, NULL, NULL, queue_lbry_kernel, gen_hash, NULL },
 
   { "pascal", ALGO_PASCAL, "", 1, 1, 1, 0, 0, 0xFF, 0xFFFFULL, 0x0000ffffUL, 0, 0, CL_QUEUE_OUT_OF_ORDER_EXEC_MODE_ENABLE, pascal_regenhash, pascal_midstate, NULL, queue_pascal_kernel, NULL, NULL },
+  { "evocoin", ALGO_X11EVO, "", 1, 1, 1, 0, 0, 0xFF, 0xFFFFULL, 0x0000ffffUL, 0, 0, CL_QUEUE_OUT_OF_ORDER_EXEC_MODE_ENABLE, evocoin_regenhash, NULL, NULL, queue_sph_kernel, gen_hash, append_x11_compiler_options },
+
 
   // Terminator (do not remove)
   { NULL, ALGO_UNK, "", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, NULL, NULL }
@@ -1290,6 +1293,7 @@ static const char *lookup_algorithm_alias(const char *lookup_alias, uint8_t *nfa
   ALGO_ALIAS_NF("nscrypt", "ckolivas", 11);
   ALGO_ALIAS_NF("adaptive-nscrypt", "ckolivas", 11);
   ALGO_ALIAS_NF("adaptive-n-scrypt", "ckolivas", 11);
+  ALGO_ALIAS("x11evo", "evocoin");
   ALGO_ALIAS("x11mod", "darkcoin-mod");
   ALGO_ALIAS("x11", "darkcoin-mod");
   ALGO_ALIAS("x11-gost", "sibcoin-mod");

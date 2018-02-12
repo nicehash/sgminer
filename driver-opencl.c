@@ -1138,7 +1138,7 @@ select_cgpu:
     //free(clState);
 
     applog(LOG_INFO, "Reinit GPU thread %d", thr_id);
-    clStates[thr_id] = initCl(virtual_gpu, name, sizeof(name), &cgpu->algorithm);
+    clStates[thr_id] = initCl(virtual_gpu, name, sizeof(name), &cgpu->algorithm, thr);
     if (!clStates[thr_id]) {
       applog(LOG_ERR, "Failed to reinit GPU thread %d", thr_id);
       goto select_cgpu;
@@ -1286,7 +1286,7 @@ static bool opencl_thread_prepare(struct thr_info *thr)
   strcpy(name, "");
   applog(LOG_INFO, "Init GPU thread %i GPU %i virtual GPU %i", i, gpu, virtual_gpu);
 
-  clStates[i] = initCl(virtual_gpu, name, sizeof(name), &cgpu->algorithm);
+  clStates[i] = initCl(virtual_gpu, name, sizeof(name), &cgpu->algorithm, thr);
   if (!clStates[i]) {
 #ifdef HAVE_CURSES
     if (use_curses)

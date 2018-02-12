@@ -68,6 +68,8 @@ char *curly = ":D";
   #include <sys/wait.h>
 #endif
 
+#include "algorithm/evocoin.h"
+#define DEFAULT_SEQUENCE "0123456789A"
 
 static char packagename[256];
 
@@ -1910,6 +1912,19 @@ static bool jobj_binary(const json_t *obj, const char *key,
 }
 #endif
 
+static void calc_midstate(struct work *work)
+{
+  unsigned char data[64];
+  uint32_t *data32 = (uint32_t *)data;
+  sph_sha256_context ctx;
+
+  flip64(data32, work->data);
+  sph_sha256_init(&ctx);
+  sph_sha256(&ctx, data, 64);
+  memcpy(work->midstate, ctx.val, 32);
+  endian_flip32(work->midstate, work->midstate);
+}
+
 static struct work *make_work(void)
 {
   struct work *w = (struct work *)calloc(1, sizeof(struct work));
@@ -1944,6 +1959,7 @@ void free_work(struct work *w)
 }
 
 static void calc_diff(struct work *work, double known);
+char *workpadding = "000000800000000000000000000000000000000000000000000000000000000000000000000000000000000080020000";
 
 #ifdef HAVE_LIBCURL
 /* Process transactions with GBT by storing the binary value of the first
@@ -2138,7 +2154,9 @@ static void gen_gbt_work(struct pool *pool, struct work *work)
 
   flip32(work->data + 4 + 32, merkleroot);
   free(merkleroot);
-  memset(work->data + 4 + 32 + 32 + 4 + 4, 0, 4 + 48); /* nonce + padding */
+  memset(work->data + 4 + 32 + 32 + 4 + 4, 0, 4); /* nonce */
+
+  hex2bin(work->data + 4 + 32 + 32 + 4 + 4 + 4, workpadding, 48);
 
   if (opt_debug) {
     char *header = bin2hex(work->data, 128);
@@ -6752,12 +6770,190 @@ static void mutex_unlock_cleanup_handler(void *mutex)
   mutex_unlock((pthread_mutex_t *) mutex);
 }
 
+static bool checkIfNeedSwitch(struct thr_info *mythr, struct work *work)
+{
+  bool algoSwitch = true;
+
+  if (work && work->pool) {
+
+    char result[100];
+    uint8_t code[12];
+
+    evocoin_twisted_code(result, work->pool->swork.ntime, code);
+
+    if (memcmp(code, mythr->curSequence, 12) == 0) {
+      algoSwitch = false;
+    } else {
+      memcpy(mythr->curSequence, code, 12);
+    }
+  }
+
+  return ((work->pool->algorithm.type == ALGO_X11EVO) && (algoSwitch || !mythr->work));
+}
+
+static void twistTheRevolver(struct thr_info *mythr, struct work *work)
+{
+	applog(LOG_DEBUG, "Twist the revolver. Time = %s" , work->pool->swork.ntime);
+	
+	bool softReset = true;
+	int i;
+	
+	pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, NULL);
+	mutex_lock(&algo_switch_lock);
+
+	mutex_lock(&algo_switch_wait_lock);
+	algo_switch_n++;
+	mutex_unlock(&algo_switch_wait_lock);
+
+	//get the number of active threads to know when to switch... if we only check total threads, we may wait for ever on a disabled GPU
+	int active_threads = 0;
+
+	rd_lock(&mining_thr_lock);
+	for (i = 0; i < mining_threads; i++)
+	{
+		struct cgpu_info *cgpu = mining_thr[i]->cgpu;
+
+		//dont count dead/sick GPU threads or we may wait for ever also...
+		if (cgpu->deven != DEV_DISABLED && cgpu->status != LIFE_SICK && cgpu->status != LIFE_DEAD)
+			active_threads++;
+	}
+	rd_unlock(&mining_thr_lock);
+
+	// If all threads are waiting now
+	if (algo_switch_n >= active_threads)
+	{
+		const char *opt;
+
+		applog(LOG_DEBUG, "Applying pool settings for %s...", isnull(get_pool_name(work->pool), ""));
+		rd_lock(&mining_thr_lock);
+
+		// Shutdown all threads first (necessary)
+		if (softReset)
+		{
+			applog(LOG_DEBUG, "Soft Reset... Shutdown threads...");
+			for (i = 0; i < mining_threads; i++)
+			{
+				struct thr_info *thr = mining_thr[i];
+				thr->cgpu->drv->thread_shutdown(thr);
+			}
+		}
+
+		// Reset stats (e.g. for working_diff to be set properly in hash_sole_work)
+		zero_stats();
+
+		//apply switcher options
+		apply_switcher_options(pool_switch_options, work->pool);
+
+		// Change algorithm for each thread (thread_prepare calls initCl)
+		if (softReset)
+			applog(LOG_DEBUG, "Soft Reset... Restarting threads...");
+
+		struct thr_info *thr;
+
+
+		for (i = 0; i < mining_threads; i++)
+		{
+			thr = mining_thr[i];
+
+			if (softReset)
+			{
+				thr->work = work;
+				thr->cgpu->drv->thread_prepare(thr);
+				thr->cgpu->drv->thread_init(thr);
+			}
+
+			// Necessary because algorithms can have dramatically different diffs
+			thr->cgpu->drv->working_diff = 1;
+		}
+
+		rd_unlock(&mining_thr_lock);
+		mutex_unlock(&algo_switch_lock);
+
+		// Hard restart if needed
+		if (!softReset)
+		{
+			applog(LOG_DEBUG, "Hard Reset Mining Threads...");
+
+			//if devices changed... enable/disable as needed
+			//if (opt_isset(pool_switch_options, SWITCHER_APPLY_DEVICE))
+			//	enable_devices();
+
+			//figure out how many mining threads we'll need
+			unsigned int n_threads = 0;
+			pthread_t restart_thr;
+
+#ifdef HAVE_ADL
+			//change gpu threads if needed
+			//if (opt_isset(pool_switch_options, SWITCHER_APPLY_GT))
+			//{
+			//	if (!empty_string((opt = get_pool_setting(work->pool->gpu_threads, default_profile.gpu_threads))))
+			//		set_gpu_threads(opt);
+			//}
+
+			rd_lock(&devices_lock);
+			for (i = 0; i < total_devices; i++)
+				if (!opt_removedisabled || !opt_devs_enabled || devices_enabled[i])
+					n_threads += devices[i]->threads;
+			rd_unlock(&devices_lock);
+#else
+			n_threads = mining_threads;
+#endif
+
+			if (unlikely(pthread_create(&restart_thr, NULL, restart_mining_threads_thread, (void *)(intptr_t)n_threads)))
+				quit(1, "restart_mining_threads create thread failed");
+
+			applog(LOG_DEBUG, "Hard reset: Exiting mining thread %d", mythr->id);
+			pthread_exit(NULL);
+		}
+		else
+		{
+			// Signal other threads to start working now
+			mutex_lock(&algo_switch_wait_lock);
+			algo_switch_n = 0;
+			pthread_cond_broadcast(&algo_switch_wait_cond);
+			mutex_unlock(&algo_switch_wait_lock);
+
+			pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, NULL);
+
+			// no need to wait, exit
+			return;
+		}
+	}
+	else {
+		mutex_unlock(&algo_switch_lock);
+
+		if (!softReset) {
+			applog(LOG_DEBUG, "Hard reset: Exiting mining thread %d", mythr->id);
+			pthread_exit(NULL);
+		}
+	}
+
+	pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, NULL);
+
+	// Set cleanup instructions in the event that the thread is cancelled
+	pthread_cleanup_push(mutex_unlock_cleanup_handler, (void *)&algo_switch_wait_lock);
+	// Wait for signal to start working again
+	mutex_lock(&algo_switch_wait_lock);
+	while (algo_switch_n > 0)
+		pthread_cond_wait(&algo_switch_wait_cond, &algo_switch_wait_lock);
+	// Non-zero argument will execute the cleanup handler after popping it
+	pthread_cleanup_pop(1);
+}
+
+
 static void get_work_prepare_thread(struct thr_info *mythr, struct work *work)
 {
   int i;
 
   applog(LOG_DEBUG, "[THR%d] get_work_prepare_thread", mythr->id);
 
+
+  
+  if (checkIfNeedSwitch(mythr, work)) {
+	  twistTheRevolver(mythr, work);
+	  return;
+  }
+  
   //if switcher is disabled
   if(opt_switchmode == SWITCH_OFF)
     return;
@@ -8698,6 +8894,9 @@ static void restart_mining_threads(unsigned int new_n_threads)
       thr = mining_thr[k];
       thr->id = k;
       thr->pool_no = pool->pool_no;
+      // init sequence
+      strcpy(thr->curSequence, DEFAULT_SEQUENCE);
+
       applog(LOG_DEBUG, "Thread %d set pool = %d (%s)", k, thr->pool_no, isnull(get_pool_name(pools[thr->pool_no]), ""));
       thr->cgpu = cgpu;
       thr->device_thread = j;

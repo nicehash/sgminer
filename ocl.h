@@ -18,6 +18,7 @@ typedef struct __clState {
   cl_mem buffer2;
   cl_mem buffer3;
   unsigned char cldata[256];
+  bool hasBitAlign;
   bool goffset;
   cl_uint vwidth;
   size_t max_work_size;
@@ -26,6 +27,6 @@ typedef struct __clState {
 } _clState;
 
 extern int clDevicesNum(void);
-extern _clState *initCl(unsigned int gpu, char *name, size_t nameSize, algorithm_t *algorithm);
+extern _clState *initCl(unsigned int gpu, char *name, size_t nameSize, algorithm_t *algorithm, struct thr_info *thr);
 
 #endif /* OCL_H */

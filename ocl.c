@@ -38,6 +38,7 @@
 #include "algorithm/pluck.h"
 #include "algorithm/yescrypt.h"
 #include "algorithm/lyra2rev2.h"
+#include "algorithm/evocoin.h"
 
 /* FIXME: only here for global config vars, replace with configuration.h
  * or similar as soon as config is in a struct instead of littered all
@@ -180,7 +181,22 @@ static cl_int create_opencl_command_queue(cl_command_queue *command_queue, cl_co
   return status;
 }
 
-_clState *initCl(unsigned int gpu, char *name, size_t nameSize, algorithm_t *algorithm)
+static bool get_opencl_bit_align_support(cl_device_id *device)
+{
+  char extensions[1024];
+  const char * camo = "cl_amd_media_ops";
+  char *find;
+  cl_int status;
+
+  status = clGetDeviceInfo(*device, CL_DEVICE_EXTENSIONS, 1024, (void *)extensions, NULL);
+  if (status != CL_SUCCESS) {
+    return false;
+  }
+  find = strstr(extensions, camo);
+  return !!find;
+}
+
+_clState *initCl(unsigned int gpu, char *name, size_t nameSize, algorithm_t *algorithm, struct thr_info *thr)
 {
   cl_int status = 0;
 	size_t compute_units = 0;
@@ -248,6 +264,8 @@ _clState *initCl(unsigned int gpu, char *name, size_t nameSize, algorithm_t *alg
     applog(LOG_ERR, "Error %d: Creating Command Queue. (clCreateCommandQueue)", status);
     return NULL;
   }
+  
+  clState->hasBitAlign = get_opencl_bit_align_support(&devices[gpu]);
 
   status = clGetDeviceInfo(devices[gpu], CL_DEVICE_PREFERRED_VECTOR_WIDTH_INT, sizeof(cl_uint), (void *)&preferred_vwidth, NULL);
   if (status != CL_SUCCESS) {
@@ -696,14 +714,29 @@ _clState *initCl(unsigned int gpu, char *name, size_t nameSize, algorithm_t *alg
 
   build_data->kernel_path = (*opt_kernel_path) ? opt_kernel_path : NULL;
   build_data->work_size = clState->wsize;
+  
+  build_data->has_bit_align = clState->hasBitAlign;
+  
   build_data->opencl_version = get_opencl_version(devices[gpu]);
+  build_data->patch_bfi = needs_bfi_patch(build_data);
 
   strcpy(build_data->binary_filename, filename);
 	build_data->binary_filename[strlen(filename) - 3] = 0x00;		// And one NULL terminator, cutting off the .cl suffix.
 	strcat(build_data->binary_filename, pbuff[gpu]);
 
-  if (clState->goffset) {
+  if (clState->goffset)
     strcat(build_data->binary_filename, "g");
+
+  uint8_t x11EvoCode[12] = { 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255 };
+
+  if (cgpu->algorithm.type == ALGO_X11EVO) {
+	  char algoSuffixCode[100];
+	  char *ntime = "00000000";
+	  if (thr && thr->work) {
+		  ntime = thr->work->pool->swork.ntime;
+	  }
+	  evocoin_twisted_code(algoSuffixCode, ntime, x11EvoCode);
+	  strcat(build_data->binary_filename, algoSuffixCode);
   }
 
   set_base_compiler_options(build_data);
@@ -718,17 +751,27 @@ _clState *initCl(unsigned int gpu, char *name, size_t nameSize, algorithm_t *alg
   if (!(clState->program = load_opencl_binary_kernel(build_data))) {
     applog(LOG_NOTICE, "Building binary %s", build_data->binary_filename);
 
-    if (!(clState->program = build_opencl_kernel(build_data, filename))) {
+    if (!(clState->program = build_opencl_kernel(build_data, filename, x11EvoCode))) {
       return NULL;
     }
 
 	// If it doesn't work, oh well, build it again next run
-    save_opencl_kernel(build_data, clState->program);
+	if (save_opencl_kernel(build_data, clState->program)) {
+      /* Program needs to be rebuilt, because the binary was patched */
+      if (build_data->patch_bfi) {
+        clReleaseProgram(clState->program);
+        clState->program = load_opencl_binary_kernel(build_data);
+      }
+    } else {
+      if (build_data->patch_bfi)
+        quit(1, "Could not save kernel to file, but it is necessary to apply BFI patch");
+    }
   }
 
   // Load kernels
-  applog(LOG_NOTICE, "Initialising kernel %s with nfactor %d, n %d",
-    filename, algorithm->nfactor, algorithm->n);
+  applog(LOG_NOTICE, "Initialising kernel %s with%s bitalign, %spatched BFI, nfactor %d, n %d",
+		filename, clState->hasBitAlign ? "" : "out", build_data->patch_bfi ? "" : "un",
+         algorithm->nfactor, algorithm->n);
 
   /* get a kernel object handle for a kernel with the given name */
   clState->kernel = clCreateKernel(clState->program, "search", &status);
